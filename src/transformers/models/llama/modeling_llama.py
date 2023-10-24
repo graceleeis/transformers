@@ -1052,6 +1052,17 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             logits = self.lm_head(hidden_states)
         logits = logits.float()
 
+        #NOTE - this is a hack to get the logprobs
+        # probs = torch.softmax(logits, dim=-1, dtype=torch.float) if labels is None else None
+        logprobs = torch.log_softmax(logits, dim=-1, dtype=torch.float) if labels is None else None
+        import os
+        if os.environ.get("SAVE_LOGPROBS"):
+            lora_model_name = os.environ.get("LORA_MODEL_NAME", None)
+            if lora_model_name:
+                torch.save(logprobs, f"hf_logprobs_{lora_model_name}.pt")
+            else:
+                torch.save(logprobs, "hf_logprobs.pt")
+
         loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
